@@ -2,6 +2,7 @@ import customtkinter
 from threading import Thread
 import time
 from PIL import Image
+from playsound import playsound
 
 
 customtkinter.set_appearance_mode("dark")
@@ -12,7 +13,8 @@ class XOGAME(customtkinter.CTk):
         super().__init__()
         self.geometry("200x250")
         self.title("TIC-TAC GAME")
-        self.resizable(width=0,height=0)
+        self.resizable(width=0, height=0)
+        self.win_flag = False
         self.check_list = [
             [0, 1, 2],
             [2, 1, 0],
@@ -35,12 +37,34 @@ class XOGAME(customtkinter.CTk):
         Thread(
             target=self.tic_tac_logic,
         ).start()
+        Thread(target=self.multi_color_txt, daemon=True).start()
+        Thread(target=self.game_start_sound, daemon=True).start()
+
+    def move_sound(self):
+        playsound("Sound\\move.mp3")
+
+    def game_win_sound(self):
+        playsound("Sound\\game_win.mp3")
+
+    def game_over_sound(self):
+        playsound("Sound\\game_over.mp3")
+
+    def game_start_sound(self):
+        playsound("Sound\\game_start.mp3")
+
+    def reset_game(self):
+        self.win_flag = False
+        for i in self.btn_list:
+            i.destroy()
+        self.txt_label.destroy()
+        self.btns()
 
     def btns(self):
         self.color_flag = True
+        self.win_flag = False
         self.seleted_list = []
         self.str_list = [customtkinter.StringVar(self, "None") for _ in range(0, 9)]
-
+        # time.sleep(10)
         self.btn1 = customtkinter.CTkButton(
             self, width=60, height=60, text="", command=lambda: self.color_box(0)
         )
@@ -102,7 +126,9 @@ class XOGAME(customtkinter.CTk):
         )
         self.txt_label.place(x=10, y=200)
 
-        self.retry_img = customtkinter.CTkImage(Image.open("retry.png"), size=(30, 30))
+        self.retry_img = customtkinter.CTkImage(
+            Image.open("Image\\reload.png"), size=(30, 30)
+        )
 
         self.retry_btn = customtkinter.CTkButton(
             self,
@@ -115,13 +141,25 @@ class XOGAME(customtkinter.CTk):
         )
         self.retry_btn.place(x=145, y=200)
 
-    def reset_game(self):
-        for i in self.btn_list:
-            i.destroy()
-        self.txt_label.destroy()
-        self.btns()
+    def multi_color_txt(self):
+        while True:
+            if self.win_flag is True:
+                try:
+                    self.txt_label.configure(text_color="red")
+                    time.sleep(0.2)
+                    self.txt_label.configure(text_color="green")
+                    time.sleep(0.2)
+                    self.txt_label.configure(text_color="Blue")
+                    time.sleep(0.2)
+                    self.txt_label.configure(text_color="white")
+                except:
+                    pass
+            else:
+                time.sleep(0.1)
 
     def color_box(self, i):
+        self.win_flag = False
+        Thread(target=self.move_sound, daemon=True).start()
         if i not in self.seleted_list:
             if self.color_flag is True:
                 self.btn_list[i].configure(
@@ -131,8 +169,7 @@ class XOGAME(customtkinter.CTk):
                 self.color_flag = False
                 self.seleted_list.append(i)
                 self.txt_label.configure(
-                    text="O - Turn!",
-                    fg_color="#242424",
+                    text="O - Turn!", fg_color="#242424", text_color="white"
                 )
             else:
                 self.btn_list[i].configure(
@@ -145,8 +182,7 @@ class XOGAME(customtkinter.CTk):
                 self.color_flag = True
                 self.seleted_list.append(i)
                 self.txt_label.configure(
-                    text="X - Turn!",
-                    fg_color="#242424",
+                    text="X - Turn!", fg_color="#242424", text_color="white"
                 )
 
     def tic_tac_logic(self):
@@ -163,11 +199,12 @@ class XOGAME(customtkinter.CTk):
                         draw_flag = False
 
             if ["1", "1", "1"] in str_lists or ["0", "0", "0"] in str_lists:
+                self.win_flag = True
                 if ["1", "1", "1"] in str_lists:
                     winner = "O"
                 else:
                     winner = "X"
-                print("win")
+                # print("win")
                 for i in range(0, 9):
                     self.str_list[i].set("None")
                 for i in self.btn_list:
@@ -175,8 +212,17 @@ class XOGAME(customtkinter.CTk):
                 self.txt_label.configure(
                     text=f"{winner} - winner..!", fg_color="#242424"
                 )
+                time.sleep(0.2)
+                Thread(target=self.game_win_sound, daemon=True).start()  # sound
+
             elif draw_flag is True:
-                self.txt_label.configure(text="Draw..!", fg_color="#242424")
+                time.sleep(0.1)
+                Thread(target=self.game_over_sound, daemon=True).start()
+                self.txt_label.configure(
+                    text="Draw..!", fg_color="#242424", text_color="white"
+                )
+                for i in range(0, 9):
+                    self.str_list[i].set("None")
             else:
                 time.sleep(0.1)
 
